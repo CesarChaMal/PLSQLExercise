@@ -1,3 +1,6 @@
+alter profile "DEFAULT" limit 
+  password_life_time unlimited;
+
 /*
     Desplegar total de salarios agrupados por job, solo de Programmer y todos los tipos de clerk (Purchasing Clerk, Shipping Clerk, Stock Clerk).
     Mostrar subtotales por job y el total general.
@@ -244,10 +247,10 @@ BEGIN
 total := 0;
 OPEN cursor_employees_01;
 
-Dbms_output.put_line('');
+DBMS_OUTPUT.PUT_LINE('');
 -- Dbms_output.put_line('Title     Employee        Total');
-Dbms_output.put_line(RPAD('Title',20) || RPAD('Employee' ,20) || RPAD('Total' ,10));
-Dbms_output.put_line('');
+DBMS_OUTPUT.PUT_LINE(RPAD('Title',20) || RPAD('Employee' ,20) || RPAD('Total' ,10));
+DBMS_OUTPUT.PUT_LINE('');
 LOOP
 FETCH cursor_employees_01 INTO title, employee, subtotal;
 
@@ -260,21 +263,21 @@ IF title <> ' ' THEN
 END IF;
 
 -- Dbms_output.put_line(title || '      ' || employee || '        ' || subtotal);
-Dbms_output.put_line(RPAD(title,20) || RPAD(employee ,20) || RPAD(subtotal ,10));
+DBMS_OUTPUT.PUT_LINE(RPAD(title,20) || RPAD(employee ,20) || RPAD(subtotal ,10));
 
 -- Dbms_output.put_line('Job Fetched:' || title);
 -- Dbms_output.put_line('Employee Fetched:' || employee);
 -- Dbms_output.put_line('Subtotal Fetched:' || subtotal);
 END LOOP;
 -- Dbms_output.put_line('Grand Total:' || RPAD(total,20));
-Dbms_output.put_line(RPAD(' ',20) || RPAD('Grand Total' ,20) || RPAD(total ,10));
+DBMS_OUTPUT.PUT_LINE(RPAD(' ',20) || RPAD('Grand Total' ,20) || RPAD(total ,10));
 
 CLOSE cursor_employees_01;
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
-        DBMS_OUTPUT.put_line('No data was found - '||SQLERRM);
+        DBMS_OUTPUT.PUT_LINE('No data was found - '||SQLERRM);
     WHEN OTHERS THEN
-        DBMS_OUTPUT.put_line('An error was encountered - '||SQLERRM);
+        DBMS_OUTPUT.PUT_LINE('An error was encountered - '||SQLERRM);
 END;
 /
 
@@ -339,9 +342,9 @@ BEGIN
 
 OPEN cursor_employees_02;
 
-Dbms_output.put_line('');
-Dbms_output.put_line(RPAD('Employee' ,20) || RPAD('Department' ,20));
-Dbms_output.put_line('');
+DBMS_OUTPUT.PUT_LINE('');
+DBMS_OUTPUT.PUT_LINE(RPAD('Employee' ,20) || RPAD('Department' ,20));
+DBMS_OUTPUT.PUT_LINE('');
 LOOP
 FETCH cursor_employees_02 INTO employee, department;
 
@@ -361,3 +364,248 @@ EXCEPTION
         DBMS_OUTPUT.put_line('An error was encountered - '||SQLERRM);
 END;
 /
+
+
+/*
+    Calcula un bono adicional que afecte su comision actual de un empleado dado (emp y dept) en funcion del departamento que labore
+    
+    ACCOUNTING recibira bono adicional de 10%
+    RESEARCH recibira bono adicional de 15%
+    SALES recibira bono adicional de 20%
+    OPERATIONS recibira bono adicional de 25%
+    
+    Datos de entrada employee id 145
+    Datos de salida
+    Comision: 1400
+    Departamento: SALES
+    Bono adicional: 280 Nuevo
+    Salario: 1680
+*/
+
+SELECT 
+    *
+FROM 
+    HR.EMPLOYEES E;
+
+SELECT 
+    *
+FROM 
+    HR.EMPLOYEES E
+WHERE
+    E.EMPLOYEE_ID=145;
+
+SELECT 
+    E.commission_pct, 
+    E.SALARY 
+FROM 
+    HR.EMPLOYEES E
+WHERE
+    E.EMPLOYEE_ID=145;
+
+SELECT 
+    MAX(E.EMPLOYEE_ID) EMPLOYEE_ID,
+    SUM(E.salary*E.commission_pct) COMISION, 
+    D.DEPARTMENT_NAME,
+    SALARY
+FROM 
+    HR.EMPLOYEES E
+INNER JOIN
+    HR.DEPARTMENTS D
+ON
+    E.DEPARTMENT_ID=D.DEPARTMENT_ID
+WHERE
+    E.EMPLOYEE_ID=145 
+GROUP BY 
+    D.DEPARTMENT_NAME, E.SALARY;
+
+
+SELECT 
+    MAX(E.EMPLOYEE_ID) EMPLOYEE_ID,
+    SUM(E.SALARY*E.COMMISSION_PCT) COMISION, 
+    D.DEPARTMENT_NAME,
+    E.SALARY,
+    MAX(E.BONO) BONO
+FROM 
+    HR.EMPLOYEES E
+INNER JOIN
+    HR.DEPARTMENTS D
+ON
+    E.DEPARTMENT_ID=D.DEPARTMENT_ID
+WHERE
+    UPPER(D.DEPARTMENT_NAME) in ('ACCOUNTING', 'RESEARCH', 'SALES', 'OPERATIONS')
+GROUP BY 
+    D.DEPARTMENT_NAME, E.SALARY;
+
+
+SELECT 
+    MAX((SELECT EMPLOYEE_ID FROM HR.EMPLOYEES WHERE EMPLOYEE_ID=E.EMPLOYEE_ID)) EMPLOYEE_ID,
+    SUM(E.SALARY*E.COMMISSION_PCT) COMISION, 
+    D.DEPARTMENT_NAME,
+    E.SALARY,
+    MAX((SELECT BONO FROM HR.EMPLOYEES WHERE EMPLOYEE_ID=E.EMPLOYEE_ID)) BONO
+FROM 
+    HR.EMPLOYEES E
+INNER JOIN
+    HR.DEPARTMENTS D
+ON
+    E.DEPARTMENT_ID=D.DEPARTMENT_ID
+WHERE
+    UPPER(D.DEPARTMENT_NAME) in ('ACCOUNTING', 'RESEARCH', 'SALES', 'OPERATIONS')
+GROUP BY 
+    D.DEPARTMENT_NAME, E.SALARY;
+
+
+SELECT 
+    MAX((SELECT EMPLOYEE_ID FROM HR.EMPLOYEES WHERE EMPLOYEE_ID=E.EMPLOYEE_ID)) EMPLOYEE_ID,
+    SUM(E.SALARY*E.COMMISSION_PCT) COMISION, 
+    D.DEPARTMENT_NAME,
+    E.SALARY,
+    MAX((SELECT BONO FROM HR.EMPLOYEES WHERE EMPLOYEE_ID=E.EMPLOYEE_ID)) BONO,
+    CASE UPPER(D.DEPARTMENT_NAME)
+    WHEN 'ACCOUNTING' THEN MAX(0.10*E.SALARY)
+    WHEN 'RESEARCH' THEN MAX(0.15*E.SALARY)
+    WHEN 'SALES' THEN MAX(0.20*E.SALARY)
+    WHEN 'OPERATIONS' THEN MAX(0.25*E.SALARY)
+    END BONO_ADICIONAL,
+    CASE UPPER(D.DEPARTMENT_NAME)
+    WHEN 'ACCOUNTING' THEN MAX(E.salary + (0.10*E.SALARY) + (E.SALARY*E.COMMISSION_PCT))
+    WHEN 'RESEARCH' THEN MAX(E.salary + (0.15*E.SALARY) + (E.SALARY*E.COMMISSION_PCT))
+    WHEN 'SALES' THEN MAX(E.salary + (0.20*E.SALARY) + (E.SALARY*E.COMMISSION_PCT))
+    WHEN 'OPERATIONS' THEN MAX(E.salary + (0.25*E.SALARY) + (E.SALARY*E.COMMISSION_PCT))
+    END NEW_SALARY
+FROM 
+    HR.EMPLOYEES E
+INNER JOIN
+    HR.DEPARTMENTS D
+ON
+    E.DEPARTMENT_ID=D.DEPARTMENT_ID
+WHERE
+    UPPER(D.DEPARTMENT_NAME) in ('ACCOUNTING', 'RESEARCH', 'SALES', 'OPERATIONS')
+GROUP BY 
+    D.DEPARTMENT_NAME, E.SALARY
+ORDER BY EMPLOYEE_ID;
+
+
+-- Without cursor solution
+SELECT 
+    E.EMPLOYEE_ID,
+    SUM(E.SALARY*E.COMMISSION_PCT) COMISION, 
+    D.DEPARTMENT_NAME,
+    E.SALARY,
+    MAX((SELECT BONO FROM HR.EMPLOYEES WHERE EMPLOYEE_ID=E.EMPLOYEE_ID)) BONO,
+    CASE UPPER(D.DEPARTMENT_NAME)
+    WHEN 'ACCOUNTING' THEN MAX(0.10*E.SALARY)
+    WHEN 'RESEARCH' THEN MAX(0.15*E.SALARY)
+    WHEN 'SALES' THEN MAX(0.20*E.SALARY)
+    WHEN 'OPERATIONS' THEN MAX(0.25*E.SALARY)
+    END BONO_ADICIONAL,
+    CASE UPPER(D.DEPARTMENT_NAME)
+    WHEN 'ACCOUNTING' THEN MAX(E.salary + (0.10*E.SALARY) + (E.SALARY*E.COMMISSION_PCT))
+    WHEN 'RESEARCH' THEN MAX(E.salary + (0.15*E.SALARY) + (E.SALARY*E.COMMISSION_PCT))
+    WHEN 'SALES' THEN MAX(E.salary + (0.20*E.SALARY) + (E.SALARY*E.COMMISSION_PCT))
+    WHEN 'OPERATIONS' THEN MAX(E.salary + (0.25*E.SALARY) + (E.SALARY*E.COMMISSION_PCT))
+    END NEW_SALARY
+FROM 
+    HR.EMPLOYEES E
+INNER JOIN
+    HR.DEPARTMENTS D
+ON
+    E.DEPARTMENT_ID=D.DEPARTMENT_ID
+WHERE
+    UPPER(D.DEPARTMENT_NAME) in ('ACCOUNTING', 'RESEARCH', 'SALES', 'OPERATIONS')
+GROUP BY 
+    D.DEPARTMENT_NAME, E.EMPLOYEE_ID, E.SALARY
+ORDER BY EMPLOYEE_ID;
+
+
+START TRANSACTION;
+UPDATE HR.EMPLOYEES SET BONO=2800 WHERE EMPLOYEE_ID=145;
+UPDATE HR.EMPLOYEES SET BONO=null WHERE EMPLOYEE_ID=145; 
+COMMIT;
+ROLLBACK;
+SELECT BONO FROM HR.EMPLOYEES WHERE EMPLOYEE_ID=145;
+
+
+-- Cursor solution
+SET FEEDBACK ON;
+-- SET FEEDBACK OFF;
+-- SET VERIFY ON;
+SET VERIFY OFF;
+-- ACCEPT x CHAR FORMAT 'A20' PROMPT 'Enter Employee ID: ';
+ACCEPT x NUMBER(6,1) PROMPT 'Enter Employee ID: ';
+SET SERVEROUTPUT ON;
+<<LOCAL>>
+DECLARE
+employeeID NUMBER(6,0);
+bono NUMBER(6,1);
+CURSOR cursor_employees_03 IS 
+SELECT 
+    E.EMPLOYEE_ID,
+    SUM(E.SALARY*E.COMMISSION_PCT) COMISION, 
+    D.DEPARTMENT_NAME,
+    E.SALARY
+FROM 
+    HR.EMPLOYEES E
+INNER JOIN
+    HR.DEPARTMENTS D
+ON
+    E.DEPARTMENT_ID=D.DEPARTMENT_ID
+WHERE
+    E.EMPLOYEE_ID=employeeID 
+--    E.EMPLOYEE_ID=145
+GROUP BY 
+    D.DEPARTMENT_NAME, E.EMPLOYEE_ID, E.SALARY;
+record_employees cursor_employees_03%ROWTYPE;
+-- type_info varchar2(400);
+
+BEGIN
+-- employeeID:= 145;
+employeeID:= &x;
+
+/*
+FOR record_employees IN cursor_employees_03 
+LOOP
+EXIT WHEN cursor_employees_03%NOTFOUND;
+*/
+
+OPEN cursor_employees_03;
+LOOP
+FETCH cursor_employees_03 INTO record_employees;
+EXIT WHEN cursor_employees_03%NOTFOUND;
+
+IF UPPER(record_employees.DEPARTMENT_NAME) = 'ACCOUNTING' THEN
+    bono:=0.10*record_employees.SALARY;
+ELSIF UPPER(record_employees.DEPARTMENT_NAME) = 'RESEARCH' THEN
+    bono:=0.15*record_employees.SALARY;
+ELSIF UPPER(record_employees.DEPARTMENT_NAME) = 'SALES' THEN
+    bono:=0.20*record_employees.SALARY;
+ELSIF UPPER(record_employees.DEPARTMENT_NAME) = 'OPERATIONS' THEN
+    bono:=0.025*record_employees.SALARY;
+END IF; 
+
+UPDATE HR.EMPLOYEES SET BONO=bono WHERE EMPLOYEE_ID=record_employees.EMPLOYEE_ID;
+
+-- SELECT DUMP(record_employees.EMPLOYEE_ID) INTO type_info FROM DUAL;
+-- DBMS_OUTPUT.PUT_LINE(type_info);
+
+DBMS_OUTPUT.PUT_LINE('');
+DBMS_OUTPUT.PUT_LINE('EMPLOYEE_ID: ' || record_employees.EMPLOYEE_ID);
+DBMS_OUTPUT.PUT_LINE('COMISION: ' || record_employees.COMISION);
+DBMS_OUTPUT.PUT_LINE('DEPARTAMENTO: ' || record_employees.DEPARTMENT_NAME);
+DBMS_OUTPUT.PUT_LINE('BONO ADICIONAL: ' || bono);
+DBMS_OUTPUT.PUT_LINE('SALARIO: ' || record_employees.SALARY);
+DBMS_OUTPUT.PUT_LINE('NUEVO SALARIO (BONO + COMISSION): ' || (record_employees.SALARY + record_employees.COMISION + bono));
+
+END LOOP;
+
+CLOSE cursor_employees_03;
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.put_line('No data was found - '||SQLERRM);
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.put_line('An error was encountered - '||SQLERRM);
+END;
+/
+SELECT BONO FROM HR.EMPLOYEES WHERE EMPLOYEE_ID=145;
+
