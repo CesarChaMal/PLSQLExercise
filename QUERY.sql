@@ -1,6 +1,11 @@
 alter profile "DEFAULT" limit 
   password_life_time unlimited;
-
+  
+create profile unlimited_pwd_prof limit
+  password_life_time unlimited;
+alter user SYSTEM profile unlimited_pwd_prof;
+  
+ 
 /*
     Desplegar total de salarios agrupados por job, solo de Programmer y todos los tipos de clerk (Purchasing Clerk, Shipping Clerk, Stock Clerk).
     Mostrar subtotales por job y el total general.
@@ -19,6 +24,14 @@ GROUP BY E.SALARY;
 
 SELECT 
     E.JOB_ID, SUM(E.SALARY) TOTAL
+FROM 
+    HR.EMPLOYEES E
+GROUP BY E.JOB_ID, E.SALARY;
+
+SELECT 
+    E.JOB_ID, SUM(E.SALARY) TOTAL,
+    SUM(E.SALARY) OVER (PARTITION BY E.JOB_ID) RUNNING_TOTAL,
+    (SELECT SUM(SALARY) FROM HR.EMPLOYEES WHERE E.JOB_ID=JOB_ID) RUNNING_TOTAL2
 FROM 
     HR.EMPLOYEES E
 GROUP BY E.JOB_ID, E.SALARY;
@@ -600,6 +613,78 @@ END LOOP;
 
 CLOSE cursor_employees_03;
 
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.put_line('No data was found - '||SQLERRM);
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.put_line('An error was encountered - '||SQLERRM);
+END;
+/
+SELECT BONO FROM HR.EMPLOYEES WHERE EMPLOYEE_ID=145;
+
+
+-- Cursor solution 2
+SET FEEDBACK ON;
+-- SET FEEDBACK OFF;
+-- SET VERIFY ON;
+SET VERIFY OFF;
+-- ACCEPT x CHAR FORMAT 'A20' PROMPT 'Enter Employee ID: ';
+ACCEPT x NUMBER(6,1) PROMPT 'Enter Employee ID: ';
+SET SERVEROUTPUT ON;
+<<LOCAL>>
+DECLARE
+employeeID NUMBER(6,0);
+bono NUMBER(6,1);
+-- type_info varchar2(400);
+
+BEGIN
+-- employeeID:= 145;
+employeeID:= &x;
+
+FOR row IN (
+    SELECT 
+        E.EMPLOYEE_ID,
+        SUM(E.SALARY*E.COMMISSION_PCT) COMISION, 
+        D.DEPARTMENT_NAME,
+        E.SALARY
+    FROM 
+        HR.EMPLOYEES E
+    INNER JOIN
+        HR.DEPARTMENTS D
+    ON
+        E.DEPARTMENT_ID=D.DEPARTMENT_ID
+    WHERE
+        E.EMPLOYEE_ID=employeeID 
+    GROUP BY 
+        D.DEPARTMENT_NAME, E.EMPLOYEE_ID, E.SALARY
+) 
+LOOP
+
+IF UPPER(row.DEPARTMENT_NAME) = 'ACCOUNTING' THEN
+    bono:=0.10*row.SALARY;
+ELSIF UPPER(row.DEPARTMENT_NAME) = 'RESEARCH' THEN
+    bono:=0.15*row.SALARY;
+ELSIF UPPER(row.DEPARTMENT_NAME) = 'SALES' THEN
+    bono:=0.20*row.SALARY;
+ELSIF UPPER(row.DEPARTMENT_NAME) = 'OPERATIONS' THEN
+    bono:=0.025*row.SALARY;
+END IF; 
+
+UPDATE HR.EMPLOYEES SET BONO=bono WHERE EMPLOYEE_ID=row.EMPLOYEE_ID;
+-- UPDATE HR.EMPLOYEES SET BONO=bono WHERE CURRENT OF cursor_employees_03;
+
+-- SELECT DUMP(record_employees.EMPLOYEE_ID) INTO type_info FROM DUAL;
+-- DBMS_OUTPUT.PUT_LINE(type_info);
+
+DBMS_OUTPUT.PUT_LINE('');
+DBMS_OUTPUT.PUT_LINE('EMPLOYEE_ID: ' || row.EMPLOYEE_ID);
+DBMS_OUTPUT.PUT_LINE('COMISION: ' || row.COMISION);
+DBMS_OUTPUT.PUT_LINE('DEPARTAMENTO: ' || row.DEPARTMENT_NAME);
+DBMS_OUTPUT.PUT_LINE('BONO ADICIONAL: ' || bono);
+DBMS_OUTPUT.PUT_LINE('SALARIO: ' || row.SALARY);
+DBMS_OUTPUT.PUT_LINE('NUEVO SALARIO (BONO + COMISSION): ' || (row.SALARY + row.COMISION + bono));
+
+END LOOP;
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
         DBMS_OUTPUT.put_line('No data was found - '||SQLERRM);
