@@ -485,10 +485,23 @@ Insert into HR.LOCATIONS (LOCATION_ID,STREET_ADDRESS,POSTAL_CODE,CITY,STATE_PROV
 Insert into HR.LOCATIONS (LOCATION_ID,STREET_ADDRESS,POSTAL_CODE,CITY,STATE_PROVINCE,COUNTRY_ID) values ('3200','Mariano Escobedo 9991','11932','Mexico City','Distrito Federal,','MX');
 REM INSERTING into HR.REGIONS
 SET DEFINE OFF;
+/*
 Insert into HR.REGIONS (REGION_ID,REGION_NAME) values ('1','Europe');
 Insert into HR.REGIONS (REGION_ID,REGION_NAME) values ('2','Americas');
 Insert into HR.REGIONS (REGION_ID,REGION_NAME) values ('3','Asia');
 Insert into HR.REGIONS (REGION_ID,REGION_NAME) values ('4','Middle East and Africa');
+*/
+Insert into HR.REGIONS (REGION_ID,REGION_NAME) 
+with HR.REGIONS AS
+(
+    SELECT '1','Europe'
+    UNION ALL
+    SELECT '2','Americas' 
+    UNION ALL
+    SELECT '3','Asia'
+    UNION ALL
+    SELECT '4','Middle East and Africa'
+);
 --------------------------------------------------------
 --  DDL for Index LOC_ID_PK
 --------------------------------------------------------

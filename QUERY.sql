@@ -1,11 +1,16 @@
 alter profile "DEFAULT" limit 
   password_life_time unlimited;
-  
+
 create profile unlimited_pwd_prof limit
   password_life_time unlimited;
 alter user SYSTEM profile unlimited_pwd_prof;
+
+alter user SYSTEM identified by "oracle";
+
+alter profile unlimited_pwd_prof limit  
+  password_reuse_max 10 
+  password_reuse_time 365;
   
- 
 /*
     Desplegar total de salarios agrupados por job, solo de Programmer y todos los tipos de clerk (Purchasing Clerk, Shipping Clerk, Stock Clerk).
     Mostrar subtotales por job y el total general.
@@ -17,24 +22,40 @@ FROM
     HR.EMPLOYEES E;
 
 SELECT 
+    *
+FROM 
+    HR.EMPLOYEES E
+WHERE E.JOB_ID IN ('IT_PROG', 'ST_MAN');
+
+
+SELECT 
+    E.JOB_ID,
     SUM(E.SALARY) TOTAL
 FROM 
     HR.EMPLOYEES E
-GROUP BY E.SALARY;
+WHERE E.JOB_ID IN ('IT_PROG', 'ST_MAN')
+GROUP BY E.JOB_ID;
 
 SELECT 
-    E.JOB_ID, SUM(E.SALARY) TOTAL
+    E.JOB_ID,
+    SUM(E.SALARY) TOTAL,
+    SUM(SUM(E.SALARY)) OVER (PARTITION BY E.JOB_ID) TOTAL,
+    SUM(SUM(E.SALARY)) OVER (ORDER BY E.JOB_ID) TOTAL_ACCUMULATED
 FROM 
     HR.EMPLOYEES E
-GROUP BY E.JOB_ID, E.SALARY;
+WHERE E.JOB_ID IN ('IT_PROG', 'ST_MAN')
+GROUP BY E.JOB_ID;
 
 SELECT 
-    E.JOB_ID, SUM(E.SALARY) TOTAL,
-    SUM(E.SALARY) OVER (PARTITION BY E.JOB_ID) RUNNING_TOTAL,
-    (SELECT SUM(SALARY) FROM HR.EMPLOYEES WHERE E.JOB_ID=JOB_ID) RUNNING_TOTAL2
+    E.JOB_ID,
+    SUM(E.SALARY) TOTAL,
+    SUM(SUM(E.SALARY)) OVER (PARTITION BY E.JOB_ID) TOTAL,
+    (SELECT SUM(SALARY) FROM HR.EMPLOYEES WHERE E.JOB_ID=JOB_ID) TOTAL,
+    SUM(SUM(E.SALARY)) OVER (ORDER BY E.JOB_ID) TOTAL_ACCUMULATED
 FROM 
     HR.EMPLOYEES E
-GROUP BY E.JOB_ID, E.SALARY;
+WHERE E.JOB_ID IN ('IT_PROG', 'ST_MAN')
+GROUP BY E.JOB_ID;
 
 SELECT 
     E.JOB_ID, SUM(E.SALARY) TOTAL
