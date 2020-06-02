@@ -555,3 +555,4 @@ END;
 /
 variable mycursor refcursor;
 EXEC calculaCurso('C001', :mycursor);
+

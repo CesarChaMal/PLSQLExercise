@@ -16,6 +16,7 @@ alter profile unlimited_pwd_prof limit
     Mostrar subtotales por job y el total general.
 */
 
+
 SELECT 
     *
 FROM 
@@ -78,7 +79,6 @@ GROUP BY E.JOB_ID
 HAVING
     E.JOB_ID = 'IT_PROG' OR E.JOB_ID LIKE '%_CLERK'
 ORDER BY E.JOB_ID ASC;
-
 
 SELECT 
     *
@@ -715,3 +715,31 @@ END;
 /
 SELECT BONO FROM HR.EMPLOYEES WHERE EMPLOYEE_ID=145;
 
+
+
+
+SELECT to_char(sysdate,'DDMMYY HH24:MI:SS')START_TIME FROM DUAL;  
+SELECT 
+    *
+FROM 
+    HR.EMPLOYEES E, HR.JOBS J
+WHERE 
+    E.JOB_ID = J.JOB_ID;
+SELECT to_char(sysdate,'DDMMYY HH24:MI:SS')END_TIME FROM DUAL;  
+
+SET TIMING ON;
+SELECT 
+    *
+FROM 
+    HR.EMPLOYEES E
+INNER JOIN
+    HR.JOBS J
+ON E.JOB_ID = J.JOB_ID;
+SET TIMING OFF;
+
+
+SET SERVEROUTPUT ON;
+VARIABLE n NUMBER;
+EXEC :n := dbms_utility.get_time;
+SELECT * FROM ALUMNO A;
+EXEC dbms_output.put_line( ((dbms_utility.get_time-:n)/100) || ' seconds....' );
